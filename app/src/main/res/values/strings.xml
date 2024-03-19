@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Security</string>
+    <string name="login">Login</string>
+    <string name="password">Password</string>
+    <string name="username">Username</string>
+    <string name="login_with_biometric">Login with Biometric</string>
+</resources>
