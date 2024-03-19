@@ -1,6 +1,7 @@
 package com.example.security;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -47,7 +48,15 @@ public class BiometricLoginActivity extends AppCompatActivity {
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
                 // Handle authentication success
-                runOnUiThread(() -> Toast.makeText(BiometricLoginActivity.this, "Authentication succeeded!", Toast.LENGTH_SHORT).show());
+                // Handle authentication success
+                runOnUiThread(() -> {
+                    Toast.makeText(BiometricLoginActivity.this, "Authentication succeeded!", Toast.LENGTH_SHORT).show();
+                    // Navigate to another activity
+                    Intent intent = new Intent(BiometricLoginActivity.this, EncryptionActivity.class);
+                    startActivity(intent);
+                    // Finish the current activity (optional, depending on your navigation flow)
+                    finish();
+                });
             }
 
             @Override
