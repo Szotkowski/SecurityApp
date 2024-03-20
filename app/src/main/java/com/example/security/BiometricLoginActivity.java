@@ -63,7 +63,9 @@ public class BiometricLoginActivity extends AppCompatActivity {
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
                 // Handle authentication failure
-                Toast.makeText(BiometricLoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show();
+                runOnUiThread(() -> {
+                    Toast.makeText(BiometricLoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show();
+                });
             }
         });
 

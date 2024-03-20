@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".EncryptionActivity">
 
     <EditText
-        android:id="@+id/passwordEditText"
+        android:id="@+id/password_edit_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:hint="Enter Password"
+        android:hint="Enter password"
         android:inputType="textPassword"
-        tools:ignore="MissingConstraints"
-        tools:layout_editor_absoluteX="0dp"
-        tools:layout_editor_absoluteY="126dp" />
+        android:padding="16dp"
+        tools:layout_editor_absoluteX="-38dp"
+        tools:layout_editor_absoluteY="194dp"
+        tools:ignore="HardcodedText,MissingConstraints"
+        android:autofillHints="password" />
 
     <Button
-        android:id="@+id/decryptButton"
+        android:id="@+id/decrypt_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/passwordEditText"
+        android:layout_below="@id/password_edit_text"
         android:layout_centerHorizontal="true"
         android:text="Decrypt"
-        tools:ignore="MissingConstraints"
         tools:layout_editor_absoluteX="154dp"
-        tools:layout_editor_absoluteY="284dp" />
+        tools:layout_editor_absoluteY="341dp"
+        tools:ignore="HardcodedText,MissingConstraints" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</RelativeLayout>

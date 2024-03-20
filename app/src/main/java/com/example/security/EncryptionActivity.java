@@ -1,103 +1,93 @@
 package com.example.security;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.Button;
+import android.util.Log;
 import android.widget.EditText;
-import android.widget.Toast;
+import android.widget.Button;
+import android.view.View;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Objects;
 
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.File;
-
 public class EncryptionActivity extends AppCompatActivity {
 
-    private static final String PASSWORD_KEY = "password";
-    private static final String ENCRYPTED_FILE_PATH = "encryptedVolume.dat";
-
-    private boolean isPasswordSet;
+    private EditText passwordEditText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_encryption_page);
 
-        isPasswordSet = isPasswordSet();
+        passwordEditText = (EditText) findViewById(R.id.password_edit_text);
+        Button decryptButton = (Button) findViewById(R.id.decrypt_button);
 
-        Button decryptButton = findViewById(R.id.decryptButton);
-        decryptButton.setOnClickListener(v -> {
-            if (isPasswordSet) {
-                mountEncryptedVolume();
-            } else {
-                setupPassword();
+        decryptButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                decryptFolder();
             }
         });
     }
 
-    private boolean isPasswordSet() {
-        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-        return sharedPreferences.contains(PASSWORD_KEY);
-    }
-
-    private void setupPassword() {
-        final EditText passwordEditText = new EditText(this);
-        passwordEditText.setHint("Enter Password");
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Set Password")
-                .setView(passwordEditText)
-                .setPositiveButton("OK", (dialog, which) -> {
-                    String password = passwordEditText.getText().toString();
-                    savePassword(password);
-                    createEncryptedVolume();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void savePassword(String password) {
-        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-        sharedPreferences.edit().putString(PASSWORD_KEY, password).apply();
-        isPasswordSet = true;
-    }
-
-    private String getPassword() {
-        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
-        return sharedPreferences.getString(PASSWORD_KEY, null);
-    }
-
-    private void createEncryptedVolume() {
-        int volumeSizeMB = 25;
-
+    private void decryptFolder() {
         try {
-            // Hash the password using SHA-256
+            String password = passwordEditText.getText().toString();
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            SecretKeySpec secretKey = generateKey(password);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(new byte[16]);
 
-            File appStorageDir = getFilesDir();
-            String encryptedFilePath = new File(appStorageDir, ENCRYPTED_FILE_PATH).getAbsolutePath();
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec);
 
-            File encryptedFile = new File(encryptedFilePath);
-            AESCrypt.encryptFile(getPassword(), encryptedFile, volumeSizeMB * 1024 * 1024);
-            Toast.makeText(this, "Encrypted volume created successfully", Toast.LENGTH_SHORT).show();
+            // Path to the folder to be decrypted
+            File folderToDecrypt = new File(getFilesDir(), "encrypted_folder");
+            if (!folderToDecrypt.exists()) {
+                if (!folderToDecrypt.mkdirs()) {
+                    Toast.makeText(getApplicationContext(), "Failed to create folder!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(getApplicationContext(), "Folder created!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Decrypt all files in the folder
+            for (File file : Objects.requireNonNull(folderToDecrypt.listFiles())) {
+                FileInputStream fis = new FileInputStream(file);
+                byte[] inputBytes = new byte[(int) file.length()];
+                fis.read(inputBytes);
+
+                byte[] decryptedBytes = cipher.doFinal(inputBytes);
+
+                // Write decrypted bytes back to the file
+                FileOutputStream fos = new FileOutputStream(file);
+                fos.write(decryptedBytes);
+
+                fis.close();
+                fos.close();
+            }
+            Toast.makeText(getApplicationContext(), "Folder decrypted successfully!", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e("DecryptionError", "Error decrypting folder: " + e.getMessage());
+            Toast.makeText(getApplicationContext(), "Error decrypting folder!", Toast.LENGTH_SHORT).show();
         }
     }
 
-
-    private void mountEncryptedVolume() {
-        try {
-            File encryptedFile = new File(getFilesDir(), ENCRYPTED_FILE_PATH);
-            AESCrypt.decryptFile(getPassword(), encryptedFile);
-            Toast.makeText(this, "Encrypted volume mounted successfully", Toast.LENGTH_SHORT).show();
-            // Now you can work with the decrypted file
-            // Example: FileInputStream fis = new FileInputStream(decryptedFile);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
+    private SecretKeySpec generateKey(String password) throws Exception {
+        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] bytes = password.getBytes(StandardCharsets.UTF_8);
+        digest.update(bytes, 0, bytes.length);
+        byte[] key = digest.digest();
+        return new SecretKeySpec(key, "AES");
     }
 }
