@@ -63,9 +63,7 @@ public class BiometricLoginActivity extends AppCompatActivity {
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
                 // Handle authentication failure
-                runOnUiThread(() -> {
-                    Toast.makeText(BiometricLoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show();
-                });
+                runOnUiThread(() -> Toast.makeText(BiometricLoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show());
             }
         });
 
@@ -85,7 +83,7 @@ public class BiometricLoginActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 setupBiometricPrompt();
             } else {
-                Toast.makeText(this, "Permission denied. Biometric authentication will not be available.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permission denied. Biometric authentication is not available.", Toast.LENGTH_SHORT).show();
             }
         }
     }

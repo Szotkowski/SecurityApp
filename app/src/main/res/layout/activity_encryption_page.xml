@@ -11,9 +11,6 @@
         android:layout_height="wrap_content"
         android:hint="Enter password"
         android:inputType="textPassword"
-        android:padding="16dp"
-        tools:layout_editor_absoluteX="-38dp"
-        tools:layout_editor_absoluteY="194dp"
         tools:ignore="HardcodedText,MissingConstraints"
         android:autofillHints="password" />
 
@@ -22,10 +19,37 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/password_edit_text"
+        android:layout_marginTop="16dp"
         android:layout_centerHorizontal="true"
         android:text="Decrypt"
-        tools:layout_editor_absoluteX="154dp"
-        tools:layout_editor_absoluteY="341dp"
+        tools:ignore="HardcodedText,MissingConstraints" />
+
+    <Button
+        android:id="@+id/encrypt_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/password_edit_text"
+        android:layout_marginTop="66dp"
+        android:layout_centerHorizontal="true"
+        android:text="Encrypt"
+        tools:ignore="HardcodedText,MissingConstraints" />
+
+    <Button
+        android:id="@+id/create_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/password_edit_text"
+        android:layout_marginTop="100dp"
+        android:text="Create"
+        tools:ignore="HardcodedText,MissingConstraints" />
+
+    <Button
+        android:id="@+id/delete_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/password_edit_text"
+        android:layout_marginTop="150dp"
+        android:text="Delete"
         tools:ignore="HardcodedText,MissingConstraints" />
 
 </RelativeLayout>

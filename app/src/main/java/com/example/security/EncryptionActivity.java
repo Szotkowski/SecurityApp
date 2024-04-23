@@ -1,93 +1,198 @@
 package com.example.security;
 
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.EditText;
 import android.widget.Button;
-import android.view.View;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.security.MessageDigest;
-import java.util.Objects;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 public class EncryptionActivity extends AppCompatActivity {
 
-    private EditText passwordEditText;
+    private static final int KEY_LENGTH = 256;
+    private static final int BUFFER_SIZE = 8192;
+    private static final String ENCRYPTION_ALGORITHM = "AES";
+    private static final String ENCRYPTION_MODE = "AES/CBC/PKCS5Padding";
+    private static final int ITERATION_COUNT = 65536;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_encryption_page);
 
-        passwordEditText = (EditText) findViewById(R.id.password_edit_text);
-        Button decryptButton = (Button) findViewById(R.id.decrypt_button);
+        Button decryptButton = findViewById(R.id.decrypt_button);
+        Button encryptButton = findViewById(R.id.encrypt_button);
+        Button createButton = findViewById(R.id.create_button);
+        Button deleteButton = findViewById(R.id.delete_button);
 
-        decryptButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                decryptFolder();
+        decryptButton.setOnClickListener(v -> {
+            try {
+                decryptFolderRecursive(new File(getFilesDir(), ".abcdefghijklmnopqrstuvwxyz"), "ahoj");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
+        encryptButton.setOnClickListener(v -> {
+            try {
+                encryptFolderRecursive(new File(getFilesDir(), ".abcdefghijklmnopqrstuvwxyz"), "ahoj");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        createButton.setOnClickListener(v -> createFolder());
+        deleteButton.setOnClickListener(v -> deleteFolderRecursive(new File(getFilesDir(), ".abcdefghijklmnopqrstuvwxyz")));
     }
 
-    private void decryptFolder() {
+    private void createFolder() {
         try {
-            String password = passwordEditText.getText().toString();
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            SecretKeySpec secretKey = generateKey(password);
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(new byte[16]);
+            File folder = new File(getFilesDir(), ".abcdefghijklmnopqrstuvwxyz");
 
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec);
-
-            // Path to the folder to be decrypted
-            File folderToDecrypt = new File(getFilesDir(), "encrypted_folder");
-            if (!folderToDecrypt.exists()) {
-                if (!folderToDecrypt.mkdirs()) {
-                    Toast.makeText(getApplicationContext(), "Failed to create folder!", Toast.LENGTH_SHORT).show();
-                    return;
+            if (!folder.exists()) {
+                boolean success = folder.mkdirs();
+                if (success) {
+                    String folderPathHash = hashString(folder.getAbsolutePath());
+                    File hashFile = new File(folder, "folder_hash.txt");
+                    FileOutputStream fos = new FileOutputStream(hashFile);
+                    assert folderPathHash != null;
+                    fos.write(folderPathHash.getBytes());
+                    fos.close();
+                } else {
+                    System.out.println("Failed to create folder.");
                 }
-                Toast.makeText(getApplicationContext(), "Folder created!", Toast.LENGTH_SHORT).show();
-                return;
+            } else {
+                System.out.println("Folder already exists.");
             }
-
-            // Decrypt all files in the folder
-            for (File file : Objects.requireNonNull(folderToDecrypt.listFiles())) {
-                FileInputStream fis = new FileInputStream(file);
-                byte[] inputBytes = new byte[(int) file.length()];
-                fis.read(inputBytes);
-
-                byte[] decryptedBytes = cipher.doFinal(inputBytes);
-
-                // Write decrypted bytes back to the file
-                FileOutputStream fos = new FileOutputStream(file);
-                fos.write(decryptedBytes);
-
-                fis.close();
-                fos.close();
-            }
-            Toast.makeText(getApplicationContext(), "Folder decrypted successfully!", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Log.e("DecryptionError", "Error decrypting folder: " + e.getMessage());
-            Toast.makeText(getApplicationContext(), "Error decrypting folder!", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
         }
     }
 
-    private SecretKeySpec generateKey(String password) throws Exception {
-        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] bytes = password.getBytes(StandardCharsets.UTF_8);
-        digest.update(bytes, 0, bytes.length);
-        byte[] key = digest.digest();
-        return new SecretKeySpec(key, "AES");
+    public static void deleteFolderRecursive(File folder) {
+        if (folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    deleteFolderRecursive(file);
+                }
+            }
+        }
+        folder.delete();
+    }
+
+    public static void encryptFolderRecursive(File folder, String password) throws IOException {
+        if (folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    encryptFolderRecursive(file, password);
+                }
+            }
+        } else {
+            encryptFile(folder, password);
+        }
+    }
+
+    public static void decryptFolderRecursive(File folder, String password) throws IOException {
+        if (folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    decryptFolderRecursive(file, password);
+                }
+            }
+        } else {
+            decryptFile(folder, password);
+        }
+    }
+
+    private static void encryptFile(File file, String password) throws IOException {
+        try {
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[16];
+            random.nextBytes(salt);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512");
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, KEY_LENGTH);
+            SecretKey secretKey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getEncoded(), ENCRYPTION_ALGORITHM);
+            Cipher cipher = Cipher.getInstance(ENCRYPTION_MODE);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
+
+            File encryptedFile = new File(file.getParent(), file.getName() + ".encrypted");
+            try (FileInputStream fis = new FileInputStream(file);
+                 FileOutputStream fos = new FileOutputStream(encryptedFile);
+                 CipherOutputStream cos = new CipherOutputStream(fos, cipher)) {
+                fos.write(salt); // Write the salt to the beginning of the encrypted file
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    cos.write(buffer, 0, bytesRead);
+                }
+            }
+            Files.deleteIfExists(file.toPath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void decryptFile(File file, String password) throws IOException {
+        try {
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[16];
+            random.nextBytes(salt);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512");
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, KEY_LENGTH);
+            SecretKey secretKey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getEncoded(), ENCRYPTION_ALGORITHM);
+            Cipher cipher = Cipher.getInstance(ENCRYPTION_MODE);
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
+
+            File decryptedFile = new File(file.getParent(), file.getName().replace(".encrypted", ""));
+            try (FileOutputStream fos = new FileOutputStream(decryptedFile);
+                 CipherInputStream cis = new CipherInputStream(Files.newInputStream(file.toPath()), cipher)) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int bytesRead;
+                while ((bytesRead = cis.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                }
+            }
+            Files.deleteIfExists(file.toPath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String hashString(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(input.getBytes());
+
+            StringBuilder hexString = new StringBuilder();
+            for (byte hashByte : hashBytes) {
+                String hex = Integer.toHexString(0xff & hashByte);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
